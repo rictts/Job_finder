@@ -1,0 +1,54 @@
+name: Pesquisa Automática de Vagas
+
+on:
+  schedule:
+    # 08:00 UTC = 09:00 em Portugal durante o horário de verão
+    - cron: "0 8 * * *"
+
+  # Permite executar manualmente pelo GitHub
+  workflow_dispatch:
+
+jobs:
+  pesquisar-vagas:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Vai buscar o código do repositório
+      - name: Checkout do projeto
+        uses: actions/checkout@v4
+
+      # 2. Instala Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 3. Instala as bibliotecas
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Executa o programa
+      - name: Executar pesquisa de vagas
+        env:
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_SERVIDOR: smtp.gmail.com
+          SMTP_PORTA: 587
+        run: |
+          python main.py
+
+      # 5. Guarda o vagas.json atualizado
+      - name: Guardar vagas encontradas
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add vagas.json
+
+          git diff --cached --quiet || git commit -m "Atualizar vagas encontradas"
+
+          git push
